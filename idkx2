@@ -1,89 +1,189 @@
-local Players = game:GetService("Players")
-local TweenService = game:GetService("TweenService")
-local RunService = game:GetService("RunService")
+local function CreateCargaGUI(opts)
+    opts = opts or {}
+    local DISPLAY_NAME = opts.displayName or ""
+    local LOAD_TIME = opts.loadTime or 3
+    local EXPAND_TIME = opts.expandTime or 0.5
+    local FINAL_PANEL_SIZE = opts.finalSize or UDim2.new(0, 360, 0, 180)
+    local START_PANEL_SIZE = opts.startSize or UDim2.new(0, 260, 0, 120)
+    local PROGRESS_BAR_HEIGHT = opts.progressHeight or 12
 
-local player = Players.LocalPlayer
-local guiParent = player:WaitForChild("PlayerGui")
+    local Players = game:GetService("Players")
+    local TweenService = game:GetService("TweenService")
+    local RunService = game:GetService("RunService")
+    local player = Players.LocalPlayer
+    if not player then
+        warn("CreateCargaGUI: LocalPlayer no disponible.")
+        return
+    end
+    local guiParent = player:WaitForChild("PlayerGui")
 
--- Cambia aquí el nombre que quieres mostrar cuando termine ("" para ninguno)
-local DISPLAY_NAME = "" -- ej: "Mi GUI"
+    -- Limpiar previo
+    local existing = guiParent:FindFirstChild("CargaGUI_v1")
+    if existing then existing:Destroy() end
 
--- Config
-local LOAD_TIME = 3                -- segundos para llenar la barra (ajusta a tu gusto)
-local EXPAND_TIME = 0.5            -- tiempo de la animación de expansión
-local FINAL_PANEL_SIZE = UDim2.new(0, 360, 0, 180) -- tamaño final del panel expandido
-local START_PANEL_SIZE = UDim2.new(0, 260, 0, 120) -- tamaño inicial del panel
-local PROGRESS_BAR_HEIGHT = 12
+    -- ScreenGui
+    local screenGui = Instance.new("ScreenGui")
+    screenGui.Name = "CargaGUI_v1"
+    screenGui.ResetOnSpawn = false
+    screenGui.Parent = guiParent
+    screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
--- Evitar duplicados (si ya existe lo quitamos)
-local existing = guiParent:FindFirstChild("CargaGUI_v1")
-if existing then existing:Destroy() end
+    -- Panel inicial
+    local panel = Instance.new("Frame")
+    panel.Name = "Panel"
+    panel.AnchorPoint = Vector2.new(0.5, 0.5)
+    panel.Position = UDim2.new(0.5, 0, 0.5, 0)
+    panel.Size = START_PANEL_SIZE
+    panel.BackgroundColor3 = Color3.fromRGB(28, 28, 30)
+    panel.BorderSizePixel = 0
+    panel.Parent = screenGui
+    panel.ClipsDescendants = true
 
--- Crear ScreenGui
-local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "CargaGUI_v1"
-screenGui.ResetOnSpawn = false
-screenGui.Parent = guiParent
-screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    local panelCorner = Instance.new("UICorner")
+    panelCorner.CornerRadius = UDim.new(0, 10)
+    panelCorner.Parent = panel
 
--- Contenedor central (panel que se expandirá)
-local panel = Instance.new("Frame")
-panel.Name = "Panel"
-panel.AnchorPoint = Vector2.new(0.5, 0.5)
-panel.Position = UDim2.new(0.5, 0, 0.5, 0)
-panel.Size = START_PANEL_SIZE
-panel.BackgroundColor3 = Color3.fromRGB(28, 28, 30)
-panel.BorderSizePixel = 0
-panel.Parent = screenGui
-panel.ClipsDescendants = true
+    -- Título
+    local title = Instance.new("TextLabel")
+    title.Name = "Titulo"
+    title.BackgroundTransparency = 1
+    title.Size = UDim2.new(1, -20, 0, 28)
+    title.Position = UDim2.new(0, 10, 0, 12)
+    title.TextXAlignment = Enum.TextXAlignment.Left
+    title.TextYAlignment = Enum.TextYAlignment.Center
+    title.Font = Enum.Font.GothamSemibold
+    title.TextSize = 16
+    title.TextColor3 = Color3.fromRGB(235,235,235)
+    title.Text = "Cargando..."
+    title.Parent = panel
 
-local panelCorner = Instance.new("UICorner")
-panelCorner.CornerRadius = UDim.new(0, 10)
-panelCorner.Parent = panel
+    -- Barra de progreso (fondo y fill)
+    local progressBg = Instance.new("Frame")
+    progressBg.Name = "ProgressBg"
+    progressBg.BackgroundColor3 = Color3.fromRGB(42, 42, 45)
+    progressBg.Size = UDim2.new(1, -20, 0, PROGRESS_BAR_HEIGHT)
+    progressBg.Position = UDim2.new(0, 10, 0, 50)
+    progressBg.BorderSizePixel = 0
+    progressBg.Parent = panel
 
--- Sombra sutil
-local shadow = Instance.new("Frame")
-shadow.Name = "Shadow"
-shadow.AnchorPoint = Vector2.new(0.5, 0.5)
-shadow.Size = UDim2.new(1, 12, 1, 12)
-shadow.Position = UDim2.new(0.5, 0, 0.5, 6)
-shadow.BackgroundTransparency = 0.9
-shadow.BorderSizePixel = 0
-shadow.Parent = panel
+    local progressBgCorner = Instance.new("UICorner")
+    progressBgCorner.CornerRadius = UDim.new(0, PROGRESS_BAR_HEIGHT/2)
+    progressBgCorner.Parent = progressBg
 
-local shadowCorner = Instance.new("UICorner")
-shadowCorner.CornerRadius = UDim.new(0, 12)
-shadowCorner.Parent = shadow
+    local progressFill = Instance.new("Frame")
+    progressFill.Name = "ProgressFill"
+    progressFill.Size = UDim2.new(0, 0, 1, 0)
+    progressFill.Position = UDim2.new(0, 0, 0, 0)
+    progressFill.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
+    progressFill.BorderSizePixel = 0
+    progressFill.Parent = progressBg
 
--- Título / texto "Cargando..."
-local title = Instance.new("TextLabel")
-title.Name = "Titulo"
-title.BackgroundTransparency = 1
-title.Size = UDim2.new(1, -20, 0, 28)
-title.Position = UDim2.new(0, 10, 0, 12)
-title.TextXAlignment = Enum.TextXAlignment.Left
-title.TextYAlignment = Enum.TextYAlignment.Center
-title.Font = Enum.Font.GothamSemibold
-title.TextSize = 16
-title.TextColor3 = Color3.fromRGB(235,235,235)
-title.Text = "Cargando..."
-title.Parent = panel
+    local progressFillCorner = Instance.new("UICorner")
+    progressFillCorner.CornerRadius = UDim.new(0, PROGRESS_BAR_HEIGHT/2)
+    progressFillCorner.Parent = progressFill
 
--- Barra de progreso: fondo
-local progressBg = Instance.new("Frame")
-progressBg.Name = "ProgressBg"
-progressBg.BackgroundColor3 = Color3.fromRGB(42, 42, 45)
-progressBg.Size = UDim2.new(1, -20, 0, PROGRESS_BAR_HEIGHT)
-progressBg.Position = UDim2.new(0, 10, 0, 50)
-progressBg.BorderSizePixel = 0
-progressBg.Parent = panel
+    local percentText = Instance.new("TextLabel")
+    percentText.Name = "Percent"
+    percentText.BackgroundTransparency = 1
+    percentText.Size = UDim2.new(1, -20, 0, 18)
+    percentText.Position = UDim2.new(0, 10, 0, 72)
+    percentText.Font = Enum.Font.Gotham
+    percentText.TextSize = 14
+    percentText.TextColor3 = Color3.fromRGB(200,200,200)
+    percentText.Text = "0%"
+    percentText.TextXAlignment = Enum.TextXAlignment.Right
+    percentText.Parent = panel
 
-local progressBgCorner = Instance.new("UICorner")
-progressBgCorner.CornerRadius = UDim.new(0, PROGRESS_BAR_HEIGHT/2)
-progressBgCorner.Parent = progressBg
+    -- Inner panel oculto
+    local innerPanel = Instance.new("Frame")
+    innerPanel.Name = "InnerPanel"
+    innerPanel.Size = UDim2.new(1, -20, 0, 60)
+    innerPanel.Position = UDim2.new(0, 10, 1, 10)
+    innerPanel.BackgroundTransparency = 1
+    innerPanel.Parent = panel
 
--- Barra de progreso: relleno (empezamos en 0 ancho)
-local progressFill = Instance.new("Frame")
-progressFill.Name = "ProgressFill"
-progressFill.Size = UDim2.new(0, 0, 1, 0) -- ancho 0 -> irá creciendo
-progressFill.Position = UDim2.new(0,
+    local nameLabel = Instance.new("TextLabel")
+    nameLabel.Name = "NameLabel"
+    nameLabel.BackgroundTransparency = 1
+    nameLabel.Size = UDim2.new(1, 0, 1, 0)
+    nameLabel.Font = Enum.Font.Gotham
+    nameLabel.TextSize = 15
+    nameLabel.TextColor3 = Color3.fromRGB(225,225,225)
+    nameLabel.TextWrapped = true
+    nameLabel.Text = (DISPLAY_NAME ~= "" and DISPLAY_NAME) or "Sin nombre"
+    nameLabel.TextXAlignment = Enum.TextXAlignment.Left
+    nameLabel.TextYAlignment = Enum.TextYAlignment.Center
+    nameLabel.Parent = innerPanel
+
+    -- Tween de progreso
+    local TweenService = game:GetService("TweenService")
+    local RunService = game:GetService("RunService")
+
+    local function tweenProgress(targetPercent, time)
+        local goal = {}
+        local fullWidth = progressBg.AbsoluteSize.X
+        local targetPixel = math.clamp(targetPercent * fullWidth, 0, fullWidth)
+        goal.Size = UDim2.new(0, targetPixel, 1, 0)
+        local tweenInfo = TweenInfo.new(time, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+        local tween = TweenService:Create(progressFill, tweenInfo, goal)
+        tween:Play()
+        return tween
+    end
+
+    local ended = false
+    local function animateLoad()
+        local tween = tweenProgress(1, LOAD_TIME)
+        local conn
+        conn = RunService.Heartbeat:Connect(function()
+            if not progressFill.Parent then
+                conn:Disconnect()
+                return
+            end
+            local bgSize = progressBg.AbsoluteSize.X
+            local fillSize = progressFill.AbsoluteSize.X
+            local pct = 0
+            if bgSize > 0 then
+                pct = math.floor((fillSize / bgSize) * 100)
+            end
+            percentText.Text = tostring(pct) .. "%"
+        end)
+        tween.Completed:Connect(function()
+            conn:Disconnect()
+            percentText.Text = "100%"
+            ended = true
+        end)
+    end
+
+    animateLoad()
+
+    spawn(function()
+        local t0 = tick()
+        while not ended and tick() - t0 < (LOAD_TIME + 1.5) do
+            RunService.Heartbeat:Wait()
+        end
+        wait(0.18)
+        local expandGoal = { Size = FINAL_PANEL_SIZE }
+        local expandInfo = TweenInfo.new(EXPAND_TIME, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
+        local expandTween = TweenService:Create(panel, expandInfo, expandGoal)
+        expandTween:Play()
+        expandTween.Completed:Wait()
+
+        local innerStartPos = innerPanel.Position
+        local innerGoalPos = UDim2.new(innerStartPos.X.Scale, innerStartPos.X.Offset, 0, 80)
+        innerPanel:TweenPosition(innerGoalPos, Enum.EasingDirection.Out, Enum.EasingStyle.Quint, 0.35, true)
+        nameLabel.TextTransparency = 1
+        local fadeTweenInfo = TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+        local fadeTween = TweenService:Create(nameLabel, fadeTweenInfo, {TextTransparency = 0})
+        fadeTween:Play()
+    end)
+
+    return {
+        gui = screenGui,
+        panel = panel,
+        destroy = function()
+            if screenGui and screenGui.Parent then screenGui:Destroy() end
+        end
+    }
+end
+
+return CreateCargaGUI
