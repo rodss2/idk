@@ -1,0 +1,89 @@
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
+
+local player = Players.LocalPlayer
+local guiParent = player:WaitForChild("PlayerGui")
+
+-- Cambia aquí el nombre que quieres mostrar cuando termine ("" para ninguno)
+local DISPLAY_NAME = "" -- ej: "Mi GUI"
+
+-- Config
+local LOAD_TIME = 3                -- segundos para llenar la barra (ajusta a tu gusto)
+local EXPAND_TIME = 0.5            -- tiempo de la animación de expansión
+local FINAL_PANEL_SIZE = UDim2.new(0, 360, 0, 180) -- tamaño final del panel expandido
+local START_PANEL_SIZE = UDim2.new(0, 260, 0, 120) -- tamaño inicial del panel
+local PROGRESS_BAR_HEIGHT = 12
+
+-- Evitar duplicados (si ya existe lo quitamos)
+local existing = guiParent:FindFirstChild("CargaGUI_v1")
+if existing then existing:Destroy() end
+
+-- Crear ScreenGui
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "CargaGUI_v1"
+screenGui.ResetOnSpawn = false
+screenGui.Parent = guiParent
+screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+
+-- Contenedor central (panel que se expandirá)
+local panel = Instance.new("Frame")
+panel.Name = "Panel"
+panel.AnchorPoint = Vector2.new(0.5, 0.5)
+panel.Position = UDim2.new(0.5, 0, 0.5, 0)
+panel.Size = START_PANEL_SIZE
+panel.BackgroundColor3 = Color3.fromRGB(28, 28, 30)
+panel.BorderSizePixel = 0
+panel.Parent = screenGui
+panel.ClipsDescendants = true
+
+local panelCorner = Instance.new("UICorner")
+panelCorner.CornerRadius = UDim.new(0, 10)
+panelCorner.Parent = panel
+
+-- Sombra sutil
+local shadow = Instance.new("Frame")
+shadow.Name = "Shadow"
+shadow.AnchorPoint = Vector2.new(0.5, 0.5)
+shadow.Size = UDim2.new(1, 12, 1, 12)
+shadow.Position = UDim2.new(0.5, 0, 0.5, 6)
+shadow.BackgroundTransparency = 0.9
+shadow.BorderSizePixel = 0
+shadow.Parent = panel
+
+local shadowCorner = Instance.new("UICorner")
+shadowCorner.CornerRadius = UDim.new(0, 12)
+shadowCorner.Parent = shadow
+
+-- Título / texto "Cargando..."
+local title = Instance.new("TextLabel")
+title.Name = "Titulo"
+title.BackgroundTransparency = 1
+title.Size = UDim2.new(1, -20, 0, 28)
+title.Position = UDim2.new(0, 10, 0, 12)
+title.TextXAlignment = Enum.TextXAlignment.Left
+title.TextYAlignment = Enum.TextYAlignment.Center
+title.Font = Enum.Font.GothamSemibold
+title.TextSize = 16
+title.TextColor3 = Color3.fromRGB(235,235,235)
+title.Text = "Cargando..."
+title.Parent = panel
+
+-- Barra de progreso: fondo
+local progressBg = Instance.new("Frame")
+progressBg.Name = "ProgressBg"
+progressBg.BackgroundColor3 = Color3.fromRGB(42, 42, 45)
+progressBg.Size = UDim2.new(1, -20, 0, PROGRESS_BAR_HEIGHT)
+progressBg.Position = UDim2.new(0, 10, 0, 50)
+progressBg.BorderSizePixel = 0
+progressBg.Parent = panel
+
+local progressBgCorner = Instance.new("UICorner")
+progressBgCorner.CornerRadius = UDim.new(0, PROGRESS_BAR_HEIGHT/2)
+progressBgCorner.Parent = progressBg
+
+-- Barra de progreso: relleno (empezamos en 0 ancho)
+local progressFill = Instance.new("Frame")
+progressFill.Name = "ProgressFill"
+progressFill.Size = UDim2.new(0, 0, 1, 0) -- ancho 0 -> irá creciendo
+progressFill.Position = UDim2.new(0,
